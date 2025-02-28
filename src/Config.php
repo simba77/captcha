@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Mobicms\Captcha;
 
-final class Config
+final readonly class Config
 {
     public function __construct(
         public int $imageWidth = 190,
