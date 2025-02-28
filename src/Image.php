@@ -22,6 +22,9 @@ use function random_int;
 use function strtolower;
 use function strtoupper;
 
+/**
+ * @psalm-api
+ */
 final readonly class Image
 {
     public function __construct(
@@ -60,6 +63,10 @@ final readonly class Image
     private function drawText(GdImage $image): GdImage
     {
         $fontsList = $this->fontProvider->getFontsList();
+        if (count($fontsList) === 0) {
+            throw new \Exception('Fonts list is empty');
+        }
+
         $font = $fontsList[random_int(0, count($fontsList) - 1)];
         $symbols = str_split($this->codeGenerator->getCode());
         $len = count($symbols);

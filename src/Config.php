@@ -15,6 +15,9 @@ final readonly class Config
         public int $lengthMax = 5,
         public string $characterSet = '23456789ABCDEGHJKMNPQRSTUVXYZabcdeghjkmnpqrstuvxyz',
         public string $excludedCombinationsPattern = 'rn|rm|mm|ww',
+        public bool $useBuiltinFonts = true,
+        /** @var array<int, array{path: string, options: array<string, array{size: int, case: FontCaseEnum}>}> */
+        public array $fontFolders = [],
     ) {
     }
 }

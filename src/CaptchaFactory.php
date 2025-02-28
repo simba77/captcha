@@ -9,32 +9,38 @@ namespace Mobicms\Captcha;
  */
 final readonly class CaptchaFactory
 {
-    public static function create(): Image
+    public static function create(Config $config = new Config()): Image
     {
-        $config = new Config();
         $codeGenerator = new CodeGenerator($config);
         $fontCollection = new FontCollection($config);
 
-        $fontsOptions = [
-            '3dlet.ttf'          => [
-                'size' => 46,
-                'case' => FontCaseEnum::LOWER,
-            ],
-            'baby_blocks.ttf'    => [
-                'size' => 22,
-                'case' => FontCaseEnum::DEFAULT,
-            ],
-            'karmaticarcade.ttf' => [
-                'size' => 26,
-                'case' => FontCaseEnum::DEFAULT,
-            ],
-            'betsy_flanagan.ttf' => [
-                'size' => 34,
-                'case' => FontCaseEnum::DEFAULT,
-            ],
-        ];
+        if ($config->useBuiltinFonts) {
+            $fontsOptions = [
+                '3dlet.ttf'          => [
+                    'size' => 46,
+                    'case' => FontCaseEnum::LOWER,
+                ],
+                'baby_blocks.ttf'    => [
+                    'size' => 22,
+                    'case' => FontCaseEnum::DEFAULT,
+                ],
+                'karmaticarcade.ttf' => [
+                    'size' => 26,
+                    'case' => FontCaseEnum::DEFAULT,
+                ],
+                'betsy_flanagan.ttf' => [
+                    'size' => 34,
+                    'case' => FontCaseEnum::DEFAULT,
+                ],
+            ];
 
-        $fontCollection->addFolder(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'fonts', $fontsOptions);
+            $defaultFolder = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'fonts';
+            $fontCollection->addFolder($defaultFolder, $fontsOptions);
+        }
+
+        foreach ($config->fontFolders as $fontFolder) {
+            $fontCollection->addFolder($fontFolder['path'], $fontFolder['options']);
+        }
 
         return new Image($config, $codeGenerator, $fontCollection);
     }
