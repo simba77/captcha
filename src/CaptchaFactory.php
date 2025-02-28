@@ -39,7 +39,7 @@ final readonly class CaptchaFactory
         }
 
         foreach ($config->fontFolders as $fontFolder) {
-            $fontCollection->addFolder($fontFolder['path'], $fontFolder['options']);
+            $fontCollection->addFolder($fontFolder['path'], $fontFolder['options'] ?? []);
         }
 
         return new Image($config, $codeGenerator, $fontCollection);
