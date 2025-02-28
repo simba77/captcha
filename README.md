@@ -37,7 +37,7 @@ composer require mobicms/captcha
 
 ```php
 <?php
-$captcha = new Mobicms\Captcha\Image();
+$captcha = Mobicms\Captcha\CaptchaFactory::create();
 $_SESSION['code'] = $captcha->getCode();
 ?>
 
