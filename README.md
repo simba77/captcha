@@ -66,7 +66,7 @@ if ($result !== null && $session !== null) {
 
 
 ## Customization (v.5)
-You can change CAPTCHA settings through `\Mobicms\Captcha\Image` class properties. 
+You can change CAPTCHA settings through `\Mobicms\Captcha\Config` class properties. 
 
 
 ### Image: resizing
@@ -75,12 +75,12 @@ Keep in mind that the width of the image will affect the density of the text.
 If the characters are very creeping on top of each other and become illegible,
 then increase the width of the image, reduce the length of the verification code, or the font size. 
 ```php
-$captcha = new Mobicms\Captcha\Image($code);
+$config = new \Mobicms\Captcha\Config(
+    imageWidth: 250, // Set the image width (default: 190)
+    imageHeight: 100, // Set the image height (default: 90)
+);
 
-// Set the image width (default: 190)
-$captcha->imageWidth = 250;
-// Set the image height (default: 90)
-$captcha->imageHeight = 100;
+$captcha = \Mobicms\Captcha\CaptchaFactory::create($config);
 ```
 
 ### Image: default font size
@@ -95,19 +95,22 @@ If you set it to `FALSE`, then a single, randomly selected font will be used for
 ![FALSE](docs/images/mix_off.png)  
 
 ### Image: fonts folders
-`array $fontFolders`  
 You can use your own set of TTF fonts. To do this, specify one or more folders in the array where .ttf font files are located.
 Keep in mind that this package already has some fonts. If you plan to use them, then merge the arrays.
 ```php
-$captcha = new Mobicms\Captcha\Image($code);
-
-$captcha->fontFolders = array_merge(
-    // Using built-in fonts 
-    $captcha->fontFolders,
-
-    // Specifying your font folders
-    ['folder1', 'folder2']
+$config = new \Mobicms\Captcha\Config(
+    useBuiltinFonts: true, // Using built-in fonts 
+    fontFolders: [
+        [
+            'path' => 'folder1',
+        ], 
+        [
+            'path' => 'folder2'
+        ],
+    ]
 );
+
+$captcha = \Mobicms\Captcha\CaptchaFactory::create($config);
 ```
 
 ### Image: adjust font
@@ -120,46 +123,29 @@ Adjustment parameters are passed to the `$fontsTune` class property as an array.
 Keep in mind that the class already has some adjustments, so if you use fonts from this package,
 then combine your array of adjustments with an array of `$fontsTune` properties. 
 ```php
-$captcha = new Mobicms\Captcha\Image($code);
+$config = new \Mobicms\Captcha\Config(
+    useBuiltinFonts: true, // Using built-in fonts 
+    fontFolders: [
+        [
+            'path' => 'folder1',
+            'options' => [
+                'myfont1.ttf' => [
+                    // Set custom font size
+                    'size' => 16,
+                    // Forcing the use of only lowercase characters of the specified font
+                    'case' => \Mobicms\Captcha\FontCaseEnum::LOWER, // Optional
+                ],
+            
+                'myfont2.ttf' => [
+                    // Forcing the use of only uppercase characters of the specified font
+                    'case' => \Mobicms\Captcha\FontCaseEnum::UPPER,
+                ],
+            ],
+        ],
+    ]
+);
 
-$adjust = [
-    // Specify the name of the font file
-    'myfont1.ttf' => [
-        // Specify the relative font size.
-        // It will be summarized with the default size specified in the $defaultFontSize property
-        // In this case, the font will be used: 30+16=46
-        'size' => 16, // Optional
-        // Forcing the use of only lowercase characters of the specified font
-        'case' => \Mobicms\Captcha\Image::FONT_CASE_LOWER, // Optional
-    ],
-
-    'myfont2.ttf' => [
-        // Forcing the use of only uppercase characters of the specified font
-        'case' => \Mobicms\Captcha\Image::FONT_CASE_UPPER,
-    ],
-
-    'myfont3.ttf' => [
-        // Font size will be decreased by 8
-        'size' => -8,
-    ],
-
-    'myfont4.ttf' => [
-        // Font size will be increased by 4
-        'size' => 4,
-    ],
-];
-
-$captcha->fontsTune = array_merge($captcha->fontsTune, $adjust);
-```
-
-### Verification code: use your own
-The Image class already has the ability to generate validation code,
-which will be sufficient in most use cases.
-However, if necessary, you can generate the validation code yourself
-and then pass string to the constructor when the `Image` class is initialized:
-```php
-$code = 'FooBar';
-$captcha = new Mobicms\Captcha\Image($code);
+$captcha = \Mobicms\Captcha\CaptchaFactory::create($config);
 ```
 
 ### Verification code: length
@@ -178,6 +164,46 @@ ambiguously, such as O (letter) and 0 (number).
 You can use a pattern to specify combinations of adjacent characters that should not appear next to each other.
 For example, **rn** can be interpreted as **m**, and so on...
 
+### Create custom factory
+
+You can customize the CAPTCHA generation object yourself as follows:
+
+```php
+$config = new \Mobicms\Captcha\Config();
+$codeGenerator = new \Mobicms\Captcha\CodeGenerator($config);
+$fontCollection = new \Mobicms\Captcha\FontCollection($config);
+
+// Add single font file
+$singleFont = new \Mobicms\Captcha\Font(
+    path: 'path/font.ttf', 
+    size: 60, 
+    case: \Mobicms\Captcha\FontCaseEnum::DEFAULT
+);
+$fontCollection->addFont($singleFont);
+
+// Add fonts from directory
+$fontCollection->addFolder('/path-to-fonts-2');
+
+// Add fonts from directory with options
+$fontCollection->addFolder(
+    path: '/path-to-fonts-2', 
+    fontsOptions: [
+        'myfont1.ttf' => [
+            // Set custom font size
+            'size' => 16,
+            // Forcing the use of only lowercase characters of the specified font
+            'case' => \Mobicms\Captcha\FontCaseEnum::LOWER, // Optional
+        ],
+    
+        'myfont2.ttf' => [
+            // Forcing the use of only uppercase characters of the specified font
+            'case' => \Mobicms\Captcha\FontCaseEnum::UPPER,
+        ],
+    ]
+);
+
+$captcha = new \Mobicms\Captcha\Image($config, $codeGenerator, $fontCollection)
+```
 
 
 ## Contributing
