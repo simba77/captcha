@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Mobicms\Captcha;
 
 use GdImage;
-use LogicException;
 
 use function base64_encode;
-use function basename;
 use function count;
 use function imagecolorallocate;
 use function imagecolorallocatealpha;
@@ -20,78 +18,17 @@ use function imagesavealpha;
 use function imagettftext;
 use function ob_get_clean;
 use function ob_start;
-use function preg_match;
 use function random_int;
-use function str_repeat;
-use function str_shuffle;
 use function strtolower;
 use function strtoupper;
-use function substr;
 
-/**
- * @psalm-api
- */
-final class Image
+final readonly class Image
 {
-    /** @var array<string> */
-    private array $fontList = [];
-    private string $code;
-
-    public const FONT_CASE_UPPER = 2;
-    public const FONT_CASE_LOWER = 1;
-
-    ////////////////////////////////////////////////////////////
-    // Image options                                          //
-    ////////////////////////////////////////////////////////////
-    public int $imageWidth = 190;
-    public int $imageHeight = 90;
-    public int $defaultFontSize = 30;
-    public bool $fontMix = true;
-
-    /** @var array<string> */
-    public array $fontFolders = [__DIR__ . '/../fonts'];
-
-    /** @var array<string, array<string, int>> */
-    public array $fontsTune = [
-        '3dlet.ttf' => [
-            'size' => 16,
-            'case' => self::FONT_CASE_LOWER,
-        ],
-        'baby_blocks.ttf' => [
-            'size' => -8,
-        ],
-        'karmaticarcade.ttf' => [
-            'size' => -4,
-        ],
-        'betsy_flanagan.ttf' => [
-            'size' => 4,
-        ],
-    ];
-
-    ////////////////////////////////////////////////////////////
-    // Code options                                           //
-    ////////////////////////////////////////////////////////////
-    public int $lengthMin = 4;
-    public int $lengthMax = 5;
-    public string $characterSet = '23456789ABCDEGHJKMNPQRSTUVXYZabcdeghjkmnpqrstuvxyz';
-    public string $excludedCombinationsPattern = 'rn|rm|mm|ww';
-
-    public function __construct(string $code = '')
-    {
-        $this->code = $code;
-    }
-
-    public function getCode(): string
-    {
-        if ($this->code === '') {
-            $length = random_int($this->lengthMin, $this->lengthMax);
-
-            do {
-                $this->code = substr(str_shuffle(str_repeat($this->characterSet, 3)), 0, $length);
-            } while (preg_match('/' . $this->excludedCombinationsPattern . '/', $this->code));
-        }
-
-        return $this->code;
+    public function __construct(
+        private Config $config,
+        private CodeGeneratorInterface $codeGenerator,
+        private FontProviderInterface $fontProvider,
+    ) {
     }
 
     /**
@@ -99,10 +36,8 @@ final class Image
      */
     public function getImage(): string
     {
-        $this->fontList = $this->getFontsList();
-
         ob_start();
-        $image = imagecreatetruecolor($this->imageWidth, $this->imageHeight);
+        $image = imagecreatetruecolor($this->config->imageWidth, $this->config->imageHeight);
 
         if ($image !== false) {
             $color = imagecolorallocatealpha($image, 0, 0, 0, 127);
@@ -124,65 +59,42 @@ final class Image
      */
     private function drawText(GdImage $image): GdImage
     {
-        $font = $this->fontList[random_int(0, count($this->fontList) - 1)];
-        $symbols = str_split($this->getCode());
+        $fontsList = $this->fontProvider->getFontsList();
+        $font = $fontsList[random_int(0, count($fontsList) - 1)];
+        $symbols = str_split($this->codeGenerator->getCode());
         $len = count($symbols);
 
         foreach ($symbols as $key => $symbol) {
-            if ($this->fontMix) {
-                $font = $this->fontList[random_int(0, count($this->fontList) - 1)];
+            if ($this->config->fontMix) {
+                $font = $fontsList[random_int(0, count($fontsList) - 1)];
             }
 
-            $fontName = basename($font);
-            $letter = $this->setLetterCase($symbol, $fontName);
-            $fontSize = $this->getFontSize($fontName);
-            $xPos = intval(($this->imageWidth - $fontSize) / $len) * $key + intval($fontSize / 2);
+            $letter = $this->setLetterCase($symbol, $font);
+            $xPos = intval(($this->config->imageWidth - $font->getSize()) / $len) * $key + intval($font->getSize() / 2);
             $xPos = random_int($xPos, $xPos + 5);
-            $yPos = $this->imageHeight - intval(($this->imageHeight - $fontSize) / 2);
+            $yPos = $this->config->imageHeight - intval(($this->config->imageHeight - $font->getSize()) / 2);
             $angle = random_int(-25, 25);
             $color = imagecolorallocate($image, random_int(0, 150), random_int(0, 150), random_int(0, 150));
 
             if ($color !== false) {
-                imagettftext($image, $fontSize, $angle, $xPos, (int) $yPos, $color, $font, $letter);
+                imagettftext($image, $font->getSize(), $angle, $xPos, $yPos, $color, $font->getPath(), $letter);
             }
         }
 
         return $image;
     }
 
-    private function setLetterCase(string $string, string $fontName): string
+    private function setLetterCase(string $string, Font $font): string
     {
-        return match ($this->fontsTune[$fontName]['case'] ?? 0) {
-            self::FONT_CASE_UPPER => strtoupper($string),
-            self::FONT_CASE_LOWER => strtolower($string),
+        return match ($font->getCase()) {
+            FontCaseEnum::UPPER => strtoupper($string),
+            FontCaseEnum::LOWER => strtolower($string),
             default => $string,
         };
     }
 
-    /**
-     * @return array<string>
-     */
-    private function getFontsList(): array
+    public function getCode(): string
     {
-        $fonts = [];
-
-        foreach ($this->fontFolders as $folder) {
-            $list = glob($folder . DIRECTORY_SEPARATOR . '*.ttf');
-
-            if ([] === $list || false === $list) {
-                throw new LogicException('The specified folder "' . $folder . '" does not contain any fonts.');
-            }
-
-            $fonts = array_merge($fonts, $list);
-        }
-
-        return $fonts;
-    }
-
-    private function getFontSize(string $fontName): int
-    {
-        return isset($this->fontsTune[$fontName]['size'])
-            ? $this->defaultFontSize + $this->fontsTune[$fontName]['size']
-            : $this->defaultFontSize;
+        return $this->codeGenerator->getCode();
     }
 }
