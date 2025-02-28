@@ -17,19 +17,19 @@ final readonly class CaptchaFactory
 
         $fontsOptions = [
             '3dlet.ttf'          => [
-                'size' => 16,
+                'size' => 46,
                 'case' => FontCaseEnum::LOWER,
             ],
             'baby_blocks.ttf'    => [
-                'size' => -8,
+                'size' => 22,
                 'case' => FontCaseEnum::DEFAULT,
             ],
             'karmaticarcade.ttf' => [
-                'size' => -4,
+                'size' => 26,
                 'case' => FontCaseEnum::DEFAULT,
             ],
             'betsy_flanagan.ttf' => [
-                'size' => 4,
+                'size' => 34,
                 'case' => FontCaseEnum::DEFAULT,
             ],
         ];
